@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="wrapper">
+  <div class="title-text">
+    <div class="title login">Inicio De Sesion </div>
+    <div class="title signup">Registro</div>
+  </div>
+  <div class="form-container">
+    <div class="slide-controls">
+      <input type="radio" name="slide" id="login" checked>
+      <input type="radio" name="slide" id="signup">
+      <label for="login" class="slide login">Inicio De Sesion</label>
+      <label for="signup" class="slide signup">Registro</label>
+      <div class="slider-tab"></div>
+    </div>
+    <div class="form-inner">
+      <!-- Login -->
+      <form class="login">
+        <div class="field">
+          <input type="text" name="email" placeholder="Email Address" required>
+        </div>
+        <div class="field">
+          <input type="password" name="password" placeholder="Password" required>
+        </div>
+        <div class="field btn">
+          <div class="btn-layer"></div>
+          <input type="submit" value="Login">
+        </div>
+        <div class="signup-link">No tiene Cuenta? <a href="#">Registro</a></div>
+      </form>
+
+      <!-- Signup -->
+      <form action="/register" method="POST" class="signup">
+        <div class="field">
+          <input type="text" name="username" placeholder="Username" required>
+        </div>
+        <div class="field">
+          <input type="email" name="email" placeholder="Email Address" required>
+        </div>
+        <div class="field">
+          <input type="password" name="password" placeholder="Password" required>
+        </div>
+        <div class="field btn">
+          <div class="btn-layer"></div>
+          <input type="submit" value="Signup">
+        </div>
+      </form>
+    </div>
+  </div>
+  <div id="g_id_onload"
+       data-client_id="656293525066-q6cpq6u1rq4nnrsi8jo419b17efckttp.apps.googleusercontent.com"
+       data-context="signin"
+       data-ux_mode="popup"
+       data-callback="handleGoogleCredentialResponse"
+       data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard"
+       data-shape="rectangular"
+       data-theme="outline"
+       data-text="signin_with"
+       data-size="large"
+       data-logo_alignment="left">
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+  // Callback de Google Identity Services
+  window.handleGoogleCredentialResponse = function (response) {
+    const idToken = response.credential;
+    localStorage.setItem("token", idToken);
+    window.location.href = "/carrito.html";
+  };
+</script>
+</body>
+</html>

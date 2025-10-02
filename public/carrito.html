@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tienda - Carrito</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+  /* Paleta FC Barcelona (igual que el login) */
+:root{
+  --azul:#004d98;       /* azul Barça */
+  --granate:#a50044;    /* burdeos Barça */
+  --oro:#ffcd00;        /* amarillo oro */
+  --card:#0f172a;
+  --card-2:#111827;
+  --fg:#f5f5f5;
+  --muted:#cbd5e1;
+  --line:#1f2937;
+  --danger:#f87171;
+  --accent:#ffcd00;     /* usamos el oro como color de acción */
+}
+
+*{box-sizing:border-box;font-family:system-ui,Segoe UI,Roboto,Arial}
+
+/* Fondo ahora con los mismos colores del login */
+body{
+  margin:0;
+  background:linear-gradient(120deg, var(--granate), var(--azul));
+  color:var(--fg);
+}
+
+/* Header con mismos tonos y líneas del login */
+header{
+  position:sticky; top:0;
+  background:rgba(17,24,39,.75);           /* equivalente a var(--card-2) con blur */
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  padding:14px 18px;
+  display:flex; justify-content:space-between; align-items:center;
+  z-index:5;
+}
+
+.brand{font-weight:800;letter-spacing:.5px}
+
+/* Cards y grilla */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:16px; padding:18px; max-width:1200px; margin:18px auto;
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px; overflow:hidden;
+  display:flex; flex-direction:column;
+}
+
+.card img{width:100%;height:160px;object-fit:cover}
+
+.card-body{padding:12px;display:grid;gap:8px}
+.price{font-weight:700}
+.muted{color:var(--muted);font-size:.9rem}
+
+/* Botones: acción en oro (igual login) */
+.btn{
+  cursor:pointer; border:0; border-radius:12px; padding:10px 12px; font-weight:700
+}
+.btn-accent{
+  background:var(--accent); color:#1a1a1a;   /* buen contraste sobre el oro */
+}
+.btn-ghost{
+  background:transparent; color:var(--fg); border:1px solid var(--line)
+}
+
+/* Carrito flotante */
+.cart{
+  position:fixed; right:18px; bottom:18px;
+  width:min(380px,92vw); max-height:70vh;
+  display:flex; flex-direction:column; gap:10px;
+  background:var(--card-2);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:0 12px 36px rgba(0,0,0,.45);
+  overflow:hidden; z-index:10;
+}
+.cart header{position:relative; top:auto; background:transparent; border:0; padding:12px 14px}
+
+.cart-list{overflow:auto; padding:0 14px 8px; display:grid; gap:10px}
+
+.cart-item{
+  display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+  background:#0b1424;                      /* tono profundo compatible con la paleta */
+  border:1px solid var(--line);
+  border-radius:12px; padding:8px;
+}
+.cart-item img{width:54px;height:54px;object-fit:cover;border-radius:10px}
+
+/* Controles de cantidad */
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{
+  width:28px; height:28px; border-radius:8px;
+  border:1px solid var(--line);
+  background:#0b1628;                      /* mismo foco que en login inputs */
+  color:var(--fg); cursor:pointer;
+}
+
+/* Eliminar en color de alerta del login */
+.remove{color:var(--danger); cursor:pointer; font-size:.9rem}
+
+/* Footer del carrito con degradado dentro de la misma paleta */
+.cart-footer{
+  border-top:1px solid var(--line);
+  padding:10px 14px; display:grid; gap:10px;
+  background:linear-gradient(180deg, var(--card-2), var(--card));
+}
+
+.total-row{display:flex;justify-content:space-between;align-items:center}
+.empty{padding:12px 14px;color:var(--muted)}
+.actions{display:flex;gap:8px}
+
+/* Pills con tonos oscuros coherentes */
+.pill{
+  padding:6px 10px; border-radius:999px;
+  background:#0b1424; border:1px solid #1b2740;
+  color:var(--muted); font-size:.8rem;
+}
+
+main{padding-bottom:86px}
+.line{display:flex;justify-content:space-between;gap:8px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">Tienda De Deportes</div>
+    <form method="POST" action="/logout">
+      <button class="btn btn-ghost" type="submit">Salir</button>
+    </form>
+  </header>
+
+  <main>
+    <section class="grid" id="products"></section>
+  </main>
+
+  <!-- Carrito flotante -->
+  <aside class="cart" aria-label="Carrito de compras">
+    <header>
+      <div style="display:flex;align-items:center;gap:8px">
+        <strong>Carrito</strong>
+        <span id="cartCount" class="pill">0 artículos</span>
+      </div>
+    </header>
+    <div id="cartList" class="cart-list"></div>
+    <div class="cart-footer">
+      <div class="total-row">
+        <span class="muted">Total:</span>
+        <strong id="cartTotal">$0.00</strong>
+      </div>
+      <div class="actions">
+        <button id="clearBtn" class="btn btn-ghost" type="button">Vaciar</button>
+        <button id="checkoutBtn" class="btn btn-accent" type="button">Finalizar compra</button>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+  const token = localStorage.getItem("token");
+
+  async function api(url, options = {}) {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        ...(options.headers || {})
+      }
+    });
+    if (!res.ok) throw new Error((await res.json()).message || "Error API");
+    return res.json();
+  }
+
+  // Estado en memoria (refleja lo del backend)
+  let carrito = [];
+
+  async function cargarCarrito() {
+    const data = await api("/api/carrito");
+    carrito = data.items || [];
+    pintarCarrito(data);
+  }
+
+  function pintarCarrito(data) {
+    const items = data?.items ?? carrito;
+    const total = data?.total ?? items.reduce((a,b)=>a + b.price*b.qty, 0);
+
+    const lista = document.getElementById("cartList");
+    const contador = document.getElementById("cartCount");
+    const totalElement = document.getElementById("cartTotal");
+
+    lista.innerHTML = "";
+    if (items.length === 0) {
+      lista.innerHTML = '<div class="empty">El carrito está vacío</div>';
+      contador.textContent = '0 artículos';
+      totalElement.textContent = '$0.00';
+      return;
+    }
+
+    items.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "cart-item";
+      row.innerHTML = `
+        <img src="${item.image}" alt="${item.name}">
+        <div>
+          <div class="line"><strong>${item.name}</strong><span class="remove" onclick="eliminar(${item.productId})">Eliminar</span></div>
+          <div class="muted">$${item.price.toFixed(2)} × ${item.qty} = <strong>$${(item.price*item.qty).toFixed(2)}</strong></div>
+        </div>
+        <div class="qty">
+          <button aria-label="Disminuir" onclick="decrementar(${item.productId})">−</button>
+          <span>${item.qty}</span>
+          <button aria-label="Aumentar" onclick="incrementar(${item.productId})">+</button>
+        </div>
+      `;
+      lista.appendChild(row);
+    });
+
+    const n = items.reduce((acc, it) => acc + it.qty, 0);
+    contador.textContent = `${n} ${n === 1 ? "artículo" : "artículos"}`;
+    totalElement.textContent = `$${total.toFixed(2)}`;
+  }
+
+  async function agregarCarrito(id, name, price, image) {
+    const data = await api("/api/carrito/add", {
+      method: "POST",
+      body: JSON.stringify({ productId: id, qty: 1 })
+    });
+    carrito = data.items;
+    pintarCarrito(data);
+  }
+
+  async function incrementar(productId) {
+    const item = carrito.find(x => x.productId === productId);
+    const qty = (item?.qty || 0) + 1;
+    const data = await api(`/api/carrito/update/${productId}`, {
+      method: "PUT",
+      body: JSON.stringify({ qty })
+    });
+    carrito = data.items;
+    pintarCarrito(data);
+  }
+
+  async function decrementar(productId) {
+    const item = carrito.find(x => x.productId === productId);
+    if (!item) return;
+    const qty = item.qty - 1;
+    const url = (qty <= 0)
+      ? `/api/carrito/remove/${productId}`
+      : `/api/carrito/update/${productId}`;
+
+    const method = (qty <= 0) ? "DELETE" : "PUT";
+    const body = (qty <= 0) ? undefined : JSON.stringify({ qty });
+
+    const data = await api(url, { method, ...(body ? { body } : {}) });
+    carrito = data.items;
+    pintarCarrito(data);
+  }
+
+  async function eliminar(productId) {
+    const data = await api(`/api/carrito/remove/${productId}`, { method: "DELETE" });
+    carrito = data.items;
+    pintarCarrito(data);
+  }
+
+  document.getElementById("clearBtn").addEventListener("click", async () => {
+    const data = await api("/api/carrito/clear", { method: "DELETE" });
+    carrito = data.items;
+    pintarCarrito(data);
+  });
+
+  document.getElementById("checkoutBtn").addEventListener("click", async () => {
+    const data = await api("/api/carrito");
+    if (!data.items?.length) return alert("El carrito está vacío");
+    alert(`✅ Compra finalizada. Total: $${(data.total||0).toFixed(2)}`);
+    const cleared = await api("/api/carrito/clear", { method: "DELETE" });
+    carrito = cleared.items;
+    pintarCarrito(cleared);
+  });
+
+  // Cargar catálogo y luego carrito
+  async function cargarProductos() {
+    if (!token) { alert("Debes iniciar sesión"); window.location.href = "/index.html"; return; }
+    const res = await fetch("/api/products", { headers: { "Authorization": `Bearer ${token}` }});
+    if (!res.ok) { alert("No autorizado"); localStorage.removeItem("token"); window.location.href="/index.html"; return; }
+    const products = await res.json();
+    const cont = document.getElementById("products");
+    cont.innerHTML = "";
+    products.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${p.image}" alt="${p.name}">
+        <div class="card-body">
+          <h4>${p.name}</h4>
+          <p class="price">$${Number(p.price).toFixed(2)}</p>
+          <button class="btn btn-accent"
+            onclick="agregarCarrito(${p.id}, '${String(p.name).replace(/'/g,"\\'")}', ${Number(p.price)}, '${String(p.image).replace(/'/g,"\\'")}')">
+            Agregar
+          </button>
+        </div>`;
+      cont.appendChild(card);
+    });
+  }
+
+  // Inicio
+  (async function init(){
+    if (!token) { alert("Debes iniciar sesión"); window.location.href="/index.html"; return; }
+    await cargarProductos();
+    await cargarCarrito();
+  })();
+
+  // logout
+  document.querySelector("form[action='/logout']").addEventListener("submit", (e) => {
+    e.preventDefault();
+    localStorage.removeItem("token");
+    window.location.href = "/index.html";
+  });
+</script>
+
+</body>
+</html>
