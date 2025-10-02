@@ -1,6 +1,5 @@
 name: PRUEBAS EN DOCKER ALAN
 
-# Se ejecuta en cada push o pull request a la rama main
 on:
   push:
     branches: [ "main" ]
@@ -57,8 +56,22 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Construir imagen Docker
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/miapp:latest .
+      - name: Construir imagen Docker (mostrar resumen detallado)
+        run: |
+          echo "🚀 Iniciando construcción de imagen Docker..."
+          docker build --progress=plain -t ${{ secrets.DOCKER_USERNAME }}/miapp:latest . | tee docker_build_summary.txt
+          echo "✅ Construcción completada."
+
+      - name: Mostrar resumen de construcción
+        run: |
+          echo "📦 --- RESUMEN DE CONSTRUCCIÓN DOCKER ---"
+          tail -n 30 docker_build_summary.txt
+
+      - name: Subir resumen como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: resumen-construccion-docker
+          path: docker_build_summary.txt
 
       - name: Subir imagen a Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/miapp:latest
