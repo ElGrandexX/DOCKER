@@ -285,4 +285,10 @@ if (require.main === module) {
     console.log(`🚀 Servidor en http://localhost:${PORT}`)
   );
 }
-module.exports = app; // exporta app para pruebas
+
+module.exports = app;
+
+// 👇 Y adicionalmente exporta las funciones helpers
+module.exports.calcTotal = calcTotal;
+module.exports.cantidadFromBody = cantidadFromBody;
+module.exports.findProduct = findProduct;
